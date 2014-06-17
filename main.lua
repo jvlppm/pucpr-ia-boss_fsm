@@ -12,6 +12,7 @@ function love.update(dt)
    boss:update(dt)
 end
 
-function love.draw()
+function love.draw(dt)
     love.graphics.print(boss.info.status, 100, 100)
+    boss:draw(dt)
 end

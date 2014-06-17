@@ -1,4 +1,5 @@
-common = require "common"
+local common = require "common"
+local animations = require "sprites/boomboom/animations"
 
 local boomboom = { }
 
@@ -27,9 +28,61 @@ function boomboom.create ()
             dizzyDuration = 2
         },
 
+        animations = {
+            current = nil,
+            currentFrame = 1,
+            timeEllapsed = 0,
+            animationComplete = true
+        },
+
         update = function (self, dt)
             if self.info.state then
                 self.info.state(self, dt)
+            end
+
+            self:advanceFrame(dt)
+        end,
+
+        advanceFrame = function(self, dt)
+            if not self.animations.current or self.animations.currentFrame > #self.animations.current.frames then
+                return
+            end
+
+            self.animations.timeEllapsed = self.animations.timeEllapsed + dt
+            local animationDuration = self.animations.current.duration
+            local frameDuration = animationDuration * self.animations.current.frames[self.animations.currentFrame].weight
+
+            if self.animations.timeEllapsed >= frameDuration then
+                self.animations.timeEllapsed = 0
+                if self.animations.currentFrame < #self.animations.current.frames then
+                    self.animations.currentFrame = self.animations.currentFrame + 1
+                end
+                if self.animations.currentFrame > #self.animations.current.frames then
+                    self.animations.current.animationComplete = true
+                end
+            end
+        end,
+
+        draw = function (self)
+            local currentAnimation = self.animations.current
+            if currentAnimation == nil or currentAnimation.frames == nil then
+                return
+            end
+
+            if self.animations.currentFrame <= #currentAnimation.frames then
+                local position = self.status.position
+                local frameIndex = self.animations.currentFrame
+
+                love.graphics.draw(currentAnimation.frames[frameIndex].image, position.x, position.y)
+            end
+        end,
+
+        setAnimation = function (self, anim)
+            if (self.animations.current ~= anim) then
+                self.animations.current = anim
+                self.animations.currentFrame = 1
+                self.animations.timeEllapsed = 0
+                self.animations.current.animationComplete = false
             end
         end,
 
@@ -37,6 +90,7 @@ function boomboom.create ()
             self.info.status = "Presenting"
             self.info.delay = self.config.presentDuration
             self.info.state = self.states.presenting
+            self:setAnimation(animations.presenting)
         end,
 
         waitToAttack = function (self)
