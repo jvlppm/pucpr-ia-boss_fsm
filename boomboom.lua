@@ -54,11 +54,12 @@ function boomboom.create ()
 
             if self.animations.timeEllapsed >= frameDuration then
                 self.animations.timeEllapsed = 0
-                if self.animations.currentFrame < #self.animations.current.frames then
+                if self.animations.currentFrame <= #self.animations.current.frames then
                     self.animations.currentFrame = self.animations.currentFrame + 1
                 end
                 if self.animations.currentFrame > #self.animations.current.frames then
-                    self.animations.current.animationComplete = true
+                    self.animations.animationComplete = true
+                    self.animations.currentFrame = self.animations.current.resetToFrame or #self.animations.current.frames
                 end
             end
         end,
@@ -82,13 +83,12 @@ function boomboom.create ()
                 self.animations.current = anim
                 self.animations.currentFrame = 1
                 self.animations.timeEllapsed = 0
-                self.animations.current.animationComplete = false
+                self.animations.animationComplete = false
             end
         end,
 
         present = function (self)
             self.info.status = "Presenting"
-            self.info.delay = self.config.presentDuration
             self.info.state = self.states.presenting
             self:setAnimation(animations.presenting)
         end,
@@ -121,7 +121,7 @@ function boomboom.create ()
         states = {
             presenting = function (self, dt)
                 self.info.delay = self.info.delay - dt
-                if self.info.delay <= 0 then
+                if self.animations.animationComplete then
                     self:waitToAttack()
                 end
             end,
