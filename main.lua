@@ -1,8 +1,8 @@
 boomboom = require "boomboom"
 
 screen = {
-    width = 800,
-    height = 600
+    width = 400,
+    height = 200
 }
 
 boss = boomboom.create()

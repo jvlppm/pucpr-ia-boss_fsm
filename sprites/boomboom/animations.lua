@@ -6,6 +6,16 @@ local animations = {
     presenting = {
         duration = 2,
         frames = { { image = sprite("presenting_1") }, { image = sprite("presenting_2") } }
+    },
+    waiting = {
+        duration = 0.3,
+        frames = { { image = sprite("waiting_1") }, { image = sprite("waiting_2") } },
+        resetToFrame = 1
+    },
+    tumbling = {
+        duration = 2,
+        frames = { { image = sprite("tumbling_1") } },
+        resetToFrame = 1
     }
 }
 

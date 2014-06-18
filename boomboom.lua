@@ -7,8 +7,8 @@ function boomboom.create ()
     return {
         status = {
             lives = 2,
-            position = { x = 200, y = 300 },
-            angle = 0,
+            position = { x = screen.width / 2, y = screen.height / 2 },
+            angle = 1.12,
             rotateSpeed = 0,
             speed = 0,
         },
@@ -16,14 +16,15 @@ function boomboom.create ()
             state = nil,
             status = '',
             delay = 0,
+            mirror = false
         },
         config = {
             presentDuration = 2,
             attackDelay = 1,
             rotationForce = 1,
             maxRotationSpeed = 1,
-            moveForce = 1,
-            maxSpeed = 2,
+            moveForce = 30,
+            maxSpeed = 64,
             maxMoveTime = 5,
             dizzyDuration = 2
         },
@@ -41,6 +42,10 @@ function boomboom.create ()
             end
 
             self:advanceFrame(dt)
+        end,
+
+        hit = function (self)
+            self.info.hit = true
         end,
 
         advanceFrame = function(self, dt)
@@ -74,7 +79,12 @@ function boomboom.create ()
                 local position = self.status.position
                 local frameIndex = self.animations.currentFrame
 
-                love.graphics.draw(currentAnimation.frames[frameIndex].image, position.x, position.y)
+                local scaleX = 1
+                if self.info.mirror then
+                    scaleX = -1
+                end
+
+                love.graphics.draw(currentAnimation.frames[frameIndex].image, position.x, position.y, 0, scaleX, 1)
             end
         end,
 
@@ -97,6 +107,7 @@ function boomboom.create ()
             self.info.status = "Waiting to attack"
             self.info.delay = self.config.attackDelay
             self.info.state = self.states.waitingToAttack
+            self:setAnimation(animations.waiting)
         end,
 
         startRotation = function (self)
@@ -118,15 +129,31 @@ function boomboom.create ()
             self.info.state = self.states.dizzy
         end,
 
+        startRotationHidden = function (self)
+            self.info.status = "Rotating to attack in the shell"
+            self.info.state = self.states.rotatingToSpeedHidden
+            self:setAnimation(animations.hidden)
+        end,
+
+        moveForwardHidden = function (self)
+            self.info.status = "Attack while in the shell"
+            self.info.delay = self.config.maxMoveTime
+            self.info.state = self.states.movingForwardHidden
+            self:setAnimation(animations.hidden)
+        end,
+
         states = {
             presenting = function (self, dt)
-                self.info.delay = self.info.delay - dt
+                if self:gotHit() then return end
+
                 if self.animations.animationComplete then
                     self:waitToAttack()
                 end
             end,
 
             waitingToAttack = function (self, dt)
+                if self:gotHit() then return end
+
                 self.info.delay = self.info.delay - dt
                 if self.info.delay <= 0 then
                     self:startRotation()
@@ -134,6 +161,8 @@ function boomboom.create ()
             end,
 
             rotatingToSpeed = function (self, dt)
+                if self:gotHit() then return end
+
                 self.status.rotateSpeed = self.status.rotateSpeed + self.config.rotationForce * dt
                 if self.status.rotateSpeed >= self.config.maxRotationSpeed then
                     -- self.status.angle = angle(self.status.position.x, self.status.position.y, mouse.x, mouse.y)
@@ -142,24 +171,18 @@ function boomboom.create ()
             end,
 
             movingForward = function (self, dt)
+                if self:gotHit() then return end
+
                 if self.status.speed < self.config.maxSpeed then
                     self.status.speed = self.status.speed + self.config.moveForce * dt
                 end
 
-                self.status.position.x = self.status.position.x + math.cos(self.status.angle) * dt * self.status.speed
-                self.status.position.y = self.status.position.y + math.sin(self.status.angle) * dt * self.status.speed
+                local currentDirection = common.angleToVector(self.status.angle)
 
-                if self.status.position.x < 0 or self.status.position.y >= screen.width then
-                    local currentDirection = angleToVector(self.status.angle)
-                    currentDirection.x = -currentDirection.x
-                    self.status.angle = vectorToAngle(currentDirection)
-                end
+                self.status.position.x = self.status.position.x + currentDirection.x * dt * self.status.speed
+                self.status.position.y = self.status.position.y + currentDirection.y * dt * self.status.speed
 
-                if self.status.position.y < 0 or self.status.position.y >= screen.height then
-                    local currentDirection = angleToVector(self.status.angle)
-                    currentDirection.y = -currentDirection.y
-                    self.status.angle = vectorToAngle(currentDirection)
-                end
+                self:bounceOnWalls()
 
                 self.info.delay = self.info.delay - dt
                 if self.info.delay <= 0 then
@@ -168,12 +191,98 @@ function boomboom.create ()
             end,
 
             dizzy = function (self, dt)
+                if self:gotHit() then return end
+
                 self.info.delay = self.info.delay - dt
                 if self.info.delay <= 0 then
                     self:waitToAttack()
                 end
+            end,
+
+            tumbling = function (self, dt)
+                self:ignoreHit()
+
+                if self.animations.animationComplete then
+                    self:startRotationHidden()
+                end
+            end,
+
+            rotatingToSpeedHidden = function (self, dt)
+                self:ignoreHit()
+
+                self.status.rotateSpeed = self.status.rotateSpeed + self.config.rotationForce * dt
+                if self.status.rotateSpeed >= self.config.maxRotationSpeed then
+                    -- self.status.angle = angle(self.status.position.x, self.status.position.y, mouse.x, mouse.y)
+                    self:moveForwardHidden()
+                end
+            end,
+
+            movingForwardHidden = function (self, dt)
+                self:ignoreHit()
+
+                if self.status.speed < self.config.maxSpeed then
+                    self.status.speed = self.status.speed + self.config.moveForce * dt
+                end
+
+                self.status.position.x = self.status.position.x + math.cos(self.status.angle) * dt * self.status.speed
+                self.status.position.y = self.status.position.y + math.sin(self.status.angle) * dt * self.status.speed
+
+                self:bounceOnWalls()
+
+                self.info.delay = self.info.delay - dt
+                if self.info.delay <= 0 then
+                    self:getDizzy()
+                end
+            end,
+        },
+
+        gotHit = function (self)
+            if not self.info.hit then
+                return false
             end
-        }
+            self.info.hit = false
+
+            self.info.status = "Hit"
+            --self.info.delay = self.config.maxMoveTime
+            self.info.state = self.states.tumbling
+            self.status.rotateSpeed = 0
+            self:setAnimation(animations.tumbling)
+
+            return true
+        end,
+
+        ignoreHit = function(self)
+            self.info.hit = false
+        end,
+
+        bounceOnWalls = function (self)
+            local currentDirection = common.angleToVector(self.status.angle)
+
+            local xSpeed = math.abs(currentDirection.x)
+            local ySpeed = math.abs(currentDirection.y)
+
+            if self.status.position.x < 0 then
+                currentDirection.x = xSpeed
+                self.status.position.x = 0
+            end
+
+            if self.status.position.x >= screen.width then
+                currentDirection.x = -xSpeed
+                self.status.position.x = screen.width - 1
+            end
+
+            if self.status.position.y < 0 then
+                currentDirection.y = ySpeed
+                self.status.position.y = 0
+            end
+
+            if self.status.position.y >= screen.height then
+                currentDirection.y = -ySpeed
+                self.status.position.y = screen.height - 1
+            end
+
+            self.status.angle = common.vectorToAngle(currentDirection)
+        end
     }
 end
 
