@@ -115,10 +115,10 @@ function boomboom.create ()
             self.info.state = self.states.rotatingToSpeed
         end,
 
-        moveForward = function (self)
-            self.info.status = "Moving Forward"
+        charge = function (self)
+            self.info.status = "Charging"
             self.info.delay = self.config.maxMoveTime
-            self.info.state = self.states.movingForward
+            self.info.state = self.states.charging
         end,
 
         getDizzy = function (self)
@@ -135,10 +135,10 @@ function boomboom.create ()
             self:setAnimation(animations.hidden)
         end,
 
-        moveForwardHidden = function (self)
+        chargeHidden = function (self)
             self.info.status = "Attack while in the shell"
             self.info.delay = self.config.maxMoveTime
-            self.info.state = self.states.movingForwardHidden
+            self.info.state = self.states.chargingHidden
             self:setAnimation(animations.hidden)
         end,
 
@@ -166,23 +166,20 @@ function boomboom.create ()
                 self.status.rotateSpeed = self.status.rotateSpeed + self.config.rotationForce * dt
                 if self.status.rotateSpeed >= self.config.maxRotationSpeed then
                     -- self.status.angle = angle(self.status.position.x, self.status.position.y, mouse.x, mouse.y)
-                    self:moveForward()
+                    self:charge()
                 end
             end,
 
-            movingForward = function (self, dt)
+            charging = function (self, dt)
                 if self:gotHit() then return end
 
                 if self.status.speed < self.config.maxSpeed then
                     self.status.speed = self.status.speed + self.config.moveForce * dt
                 end
 
-                local currentDirection = common.angleToVector(self.status.angle)
-
-                self.status.position.x = self.status.position.x + currentDirection.x * dt * self.status.speed
-                self.status.position.y = self.status.position.y + currentDirection.y * dt * self.status.speed
-
-                self:bounceOnWalls()
+                --self::rotateTowards(mouse.x, mouse.y)
+                self:advancePosition()
+                self:stopOnWalls()
 
                 self.info.delay = self.info.delay - dt
                 if self.info.delay <= 0 then
@@ -213,20 +210,18 @@ function boomboom.create ()
                 self.status.rotateSpeed = self.status.rotateSpeed + self.config.rotationForce * dt
                 if self.status.rotateSpeed >= self.config.maxRotationSpeed then
                     -- self.status.angle = angle(self.status.position.x, self.status.position.y, mouse.x, mouse.y)
-                    self:moveForwardHidden()
+                    self:chargeHidden()
                 end
             end,
 
-            movingForwardHidden = function (self, dt)
+            chargingHidden = function (self, dt)
                 self:ignoreHit()
 
                 if self.status.speed < self.config.maxSpeed then
                     self.status.speed = self.status.speed + self.config.moveForce * dt
                 end
 
-                self.status.position.x = self.status.position.x + math.cos(self.status.angle) * dt * self.status.speed
-                self.status.position.y = self.status.position.y + math.sin(self.status.angle) * dt * self.status.speed
-
+                self:advancePosition()
                 self:bounceOnWalls()
 
                 self.info.delay = self.info.delay - dt
@@ -253,6 +248,12 @@ function boomboom.create ()
 
         ignoreHit = function(self)
             self.info.hit = false
+        end,
+
+        advancePosition = function (self)
+            local currentDirection = common.angleToVector(self.status.angle)
+            self.status.position.x = self.status.position.x + currentDirection.x * dt * self.status.speed
+            self.status.position.y = self.status.position.y + currentDirection.y * dt * self.status.speed
         end,
 
         bounceOnWalls = function (self)
@@ -282,6 +283,28 @@ function boomboom.create ()
             end
 
             self.status.angle = common.vectorToAngle(currentDirection)
+        end,
+
+        stopOnWalls = function (self)
+            if self.status.position.x < 0 then
+                self.status.position.x = 0
+                self.status.speed = 0
+            end
+
+            if self.status.position.x >= screen.width then
+                self.status.position.x = screen.width - 1
+                self.status.speed = 0
+            end
+
+            if self.status.position.y < 0 then
+                self.status.position.y = 0
+                self.status.speed = 0
+            end
+
+            if self.status.position.y >= screen.height then
+                self.status.position.y = screen.height - 1
+                self.status.speed = 0
+            end
         end
     }
 end
