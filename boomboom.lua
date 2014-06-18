@@ -177,8 +177,9 @@ function boomboom.create ()
                     self.status.speed = self.status.speed + self.config.moveForce * dt
                 end
 
-                --self::rotateTowards(mouse.x, mouse.y)
-                self:advancePosition()
+                x, y = love.mouse.getPosition()
+                self:lookTo( { x = x, y = y }, dt )
+                self:advancePosition(dt)
                 self:stopOnWalls()
 
                 self.info.delay = self.info.delay - dt
@@ -209,7 +210,9 @@ function boomboom.create ()
 
                 self.status.rotateSpeed = self.status.rotateSpeed + self.config.rotationForce * dt
                 if self.status.rotateSpeed >= self.config.maxRotationSpeed then
-                    -- self.status.angle = angle(self.status.position.x, self.status.position.y, mouse.x, mouse.y)
+                    x, y = love.mouse.getPosition()
+                    self:lookTo( { x = x, y = y } )
+                    self.status.angle = common.angle( self.status.position.x, self.status.position.y, x, y )
                     self:chargeHidden()
                 end
             end,
@@ -221,7 +224,7 @@ function boomboom.create ()
                     self.status.speed = self.status.speed + self.config.moveForce * dt
                 end
 
-                self:advancePosition()
+                self:advancePosition(dt)
                 self:bounceOnWalls()
 
                 self.info.delay = self.info.delay - dt
@@ -250,7 +253,7 @@ function boomboom.create ()
             self.info.hit = false
         end,
 
-        advancePosition = function (self)
+        advancePosition = function (self, dt)
             local currentDirection = common.angleToVector(self.status.angle)
             self.status.position.x = self.status.position.x + currentDirection.x * dt * self.status.speed
             self.status.position.y = self.status.position.y + currentDirection.y * dt * self.status.speed
@@ -304,6 +307,33 @@ function boomboom.create ()
             if self.status.position.y >= screen.height then
                 self.status.position.y = screen.height - 1
                 self.status.speed = 0
+            end
+        end,
+
+        lookTo = function (self, position, dt)
+            local angle = common.angle( self.status.position.x, self.status.position.y, position.x, position.y )
+            if true or not dt then
+                self.status.angle = angle
+            else
+                local dir = math.abs(angle - self.status.angle)
+                local esq = math.abs(self.status.angle - angle)
+
+                local direction = 1
+                if esq < dir then
+                    direction = -1
+                end
+
+                --self.info.status = dir.." - "..angle
+
+                self.status.angle = self.status.angle + dt * direction
+
+                if self.status.angle >= math.pi * 2 then
+                    self.status.angle = self.status.angle - math.pi * 2
+                end
+
+                if self.status.angle <= -math.pi * 2 then
+                    self.status.angle = self.status.angle + math.pi * 2
+                end
             end
         end
     }
