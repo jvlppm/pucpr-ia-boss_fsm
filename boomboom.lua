@@ -25,8 +25,11 @@ function boomboom.create ()
             maxRotationSpeed = 1,
             angleChangeSpeed = 2,
             moveForce = 30,
-            maxSpeed = 64,
-            maxMoveTime = 5,
+            hiddenMoveForce = 30,
+            maxSpeed = 128,
+            maxSpeedHidden = 256,
+            maxMoveTime = 10,
+            maxMoveTimeHidden = 15,
             dizzyDuration = 2,
             origin = { 0.5, 1 }
         },
@@ -158,7 +161,7 @@ function boomboom.create ()
 
         chargeHidden = function (self)
             self.info.status = "Attack while in the shell"
-            self.info.delay = self.config.maxMoveTime
+            self.info.delay = self.config.maxMoveTimeHidden
             self.info.state = self.states.chargingHidden
             self:setAnimation(animations.hidden)
         end,
@@ -241,8 +244,8 @@ function boomboom.create ()
             chargingHidden = function (self, dt)
                 self:ignoreHit()
 
-                if self.status.speed < self.config.maxSpeed then
-                    self.status.speed = self.status.speed + self.config.moveForce * dt
+                if self.status.speed < self.config.maxSpeedHidden then
+                    self.status.speed = self.status.speed + self.config.hiddenMoveForce * dt
                 end
 
                 self:advancePosition(dt)
@@ -336,25 +339,22 @@ function boomboom.create ()
             if not dt then
                 self.status.angle = angle
             else
+
                 local diff = angle - self.status.angle
                 if diff > math.pi then
-                    diff = ((2*math.pi) - diff);
+                    diff = diff - ((2*math.pi));
                 elseif diff < -math.pi then
-                    diff = ((2*math.pi) + diff);
+                    diff = diff + ((2*math.pi));
                 end
 
-                local direction = 1
-                if diff < 0 then
-                    direction = -1
-                end
+                local direction = diff < 0 and -1 or 1
 
                 self.status.angle = self.status.angle + dt * direction * self.config.angleChangeSpeed
 
-                if self.status.angle >= math.pi * 2 then
+                if self.status.angle > math.pi then
                     self.status.angle = self.status.angle - math.pi * 2
                 end
-
-                if self.status.angle <= -math.pi * 2 then
+                if self.status.angle < -math.pi then
                     self.status.angle = self.status.angle + math.pi * 2
                 end
             end

@@ -16,6 +16,11 @@ local animations = {
         duration = 2,
         frames = { { image = sprite("tumbling_1") } },
         resetToFrame = 1
+    },
+    hidden = {
+        duration = 0.5,
+        frames = { { image = sprite("rotating_1") }, { image = sprite("rotating_2") }, { image = sprite("rotating_3") }, { image = sprite("rotating_4") } },
+        resetToFrame = 1
     }
 }
 
