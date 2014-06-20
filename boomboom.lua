@@ -256,6 +256,10 @@ function boomboom.create ()
                     self:getDizzy()
                 end
             end,
+
+            dying = function (self, dt)
+                self:ignoreHit()
+            end
         },
 
         gotHit = function (self)
@@ -264,12 +268,17 @@ function boomboom.create ()
             end
             self.info.hit = false
 
-            self.info.status = "Hit"
-            --self.info.delay = self.config.maxMoveTime
-            self.info.state = self.states.tumbling
+            self.status.lives = self.status.lives - 1
             self.status.rotateSpeed = 0
-            self:setAnimation(animations.tumbling)
-
+            if self.status.lives >= 0 then
+                self.info.status = "Hit"
+                self.info.state = self.states.tumbling
+                self:setAnimation(animations.tumbling)
+            else
+                self.info.status = "Dead"
+                self.info.state = self.states.dying
+                self:setAnimation(animations.dying)
+            end
             return true
         end,
 

@@ -14,14 +14,19 @@ local animations = {
     },
     tumbling = {
         duration = 2,
-        frames = { { image = sprite("tumbling_1") } },
+        frames = { { image = sprite("tumbling_1") }, { image = sprite("tumbling_2") } },
         resetToFrame = 1
     },
     hidden = {
         duration = 0.5,
         frames = { { image = sprite("rotating_1") }, { image = sprite("rotating_2") }, { image = sprite("rotating_3") }, { image = sprite("rotating_4") } },
         resetToFrame = 1
-    }
+    },
+    dying = {
+        duration = 2,
+        frames = { { image = sprite("dying_1"), weight = 5 }, { image = sprite("tumbling_2") }, { image = sprite("tumbling_1") } },
+        resetToFrame = 3
+    },
 }
 
 for k,v in pairs(animations) do
