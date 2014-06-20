@@ -1,8 +1,8 @@
 boomboom = require "boomboom"
 
 screen = {
-    width = 400,
-    height = 200
+    width = 800,
+    height = 400
 }
 
 boss = boomboom.create()
@@ -15,4 +15,12 @@ end
 function love.draw(dt)
     love.graphics.print(boss.info.status, 100, 100)
     boss:draw(dt)
+end
+
+function love.mousepressed(x, y, button)
+    if button == "l" then
+        if boss:overlapping(x, y) then
+            boss:hit()
+        end
+    end
 end

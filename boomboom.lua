@@ -23,10 +23,12 @@ function boomboom.create ()
             attackDelay = 1,
             rotationForce = 1,
             maxRotationSpeed = 1,
+            angleChangeSpeed = 2,
             moveForce = 30,
             maxSpeed = 64,
             maxMoveTime = 5,
-            dizzyDuration = 2
+            dizzyDuration = 2,
+            origin = { 0.5, 1 }
         },
 
         animations = {
@@ -46,6 +48,25 @@ function boomboom.create ()
 
         hit = function (self)
             self.info.hit = true
+        end,
+
+        currentFrame = function(self)
+            if not self.animations.current or self.animations.currentFrame > #self.animations.current.frames then
+                return nil
+            end
+            return self.animations.current.frames[self.animations.currentFrame].image
+        end,
+
+        getWidth = function(self)
+            local frame = self:currentFrame()
+            if not frame then return 0 end
+            return frame:getWidth()
+        end,
+
+        getHeight = function(self)
+            local frame = self:currentFrame()
+            if not frame then return 0 end
+            return frame:getHeight()
         end,
 
         advanceFrame = function(self, dt)
@@ -84,7 +105,7 @@ function boomboom.create ()
                     scaleX = -1
                 end
 
-                love.graphics.draw(currentAnimation.frames[frameIndex].image, position.x, position.y, 0, scaleX, 1)
+                love.graphics.draw(currentAnimation.frames[frameIndex].image, position.x - self.config.origin[1] * self:getWidth(), position.y - self.config.origin[2] * self:getHeight(), 0, scaleX, 1)
             end
         end,
 
@@ -165,7 +186,8 @@ function boomboom.create ()
 
                 self.status.rotateSpeed = self.status.rotateSpeed + self.config.rotationForce * dt
                 if self.status.rotateSpeed >= self.config.maxRotationSpeed then
-                    -- self.status.angle = angle(self.status.position.x, self.status.position.y, mouse.x, mouse.y)
+                    x, y = love.mouse.getPosition()
+                    self:lookTo( { x = x, y = y } )
                     self:charge()
                 end
             end,
@@ -212,7 +234,6 @@ function boomboom.create ()
                 if self.status.rotateSpeed >= self.config.maxRotationSpeed then
                     x, y = love.mouse.getPosition()
                     self:lookTo( { x = x, y = y } )
-                    self.status.angle = common.angle( self.status.position.x, self.status.position.y, x, y )
                     self:chargeHidden()
                 end
             end,
@@ -312,20 +333,22 @@ function boomboom.create ()
 
         lookTo = function (self, position, dt)
             local angle = common.angle( self.status.position.x, self.status.position.y, position.x, position.y )
-            if true or not dt then
+            if not dt then
                 self.status.angle = angle
             else
-                local dir = math.abs(angle - self.status.angle)
-                local esq = math.abs(self.status.angle - angle)
+                local diff = angle - self.status.angle
+                if diff > math.pi then
+                    diff = ((2*math.pi) - diff);
+                elseif diff < -math.pi then
+                    diff = ((2*math.pi) + diff);
+                end
 
                 local direction = 1
-                if esq < dir then
+                if diff < 0 then
                     direction = -1
                 end
 
-                --self.info.status = dir.." - "..angle
-
-                self.status.angle = self.status.angle + dt * direction
+                self.status.angle = self.status.angle + dt * direction * self.config.angleChangeSpeed
 
                 if self.status.angle >= math.pi * 2 then
                     self.status.angle = self.status.angle - math.pi * 2
@@ -335,6 +358,16 @@ function boomboom.create ()
                     self.status.angle = self.status.angle + math.pi * 2
                 end
             end
+        end,
+
+        overlapping = function(self, x, y)
+            local bossX = boss.status.position.x - boss.config.origin[1] * boss:getWidth()
+            local bossY = boss.status.position.y - boss.config.origin[2] * boss:getHeight()
+
+            local xHit = x >= bossX and x < bossX + boss:getWidth()
+            local yHit = y >= bossY and y < bossY + boss:getHeight()
+
+            return xHit and yHit
         end
     }
 end
